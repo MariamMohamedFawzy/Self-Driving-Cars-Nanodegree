@@ -7,7 +7,9 @@
 [image2]: ./dataaug.png "Data Augmentation"
 [image3]: ./modelarc.png "Model Architecture"
 [image4]: ./newimgs.png "New Images"
-[image5]: ./sftmx.png "Softmax"
+[image5]: ./sft_new.png "Softmax"
+[image6]: ./train.png "Model Training Accuracy"
+[image7]: ./train2.png "Model Training Loss"
 
 
 The steps of this project are the following:
@@ -33,6 +35,8 @@ I used the pandas library to load the dataset and calculate a summary of the dat
 
 ![Histogram of classes in training and validation set][image1]
 
+The x-axis represents the classes and the y-axis represents the number of data points in eaxh class.
+
 ---------
 
 ## Data Augmentation
@@ -52,14 +56,39 @@ This also acts as regularization to the model.
 
 ## Model
 
+### Architecture
+
 * The model is a deep convolutional neural networks with inception module with resnet connection as the last convolutional layer.
+
 * The dropout is used with probability=0.3 between the convolution layers and probability=0.5 between the fully connected layers to avoid overfitting.
+
 * The filters of the convolution start with 64 and increase to 128.
-* The model is trained with decreasing learning rate if the validation loss does not improve for 2 epochs and the model stops training if the validation loss does not improve for 4 epochs.
+
 
 <!-- ![Model Architecture][image3] -->
 
 <img src="modelarc.png" alt="Model Architecture" style="width:200px;" />
+
+### Training
+
+* I used Adam optimizer with learning rate = 3e-4 with batch size = 64
+
+* The model is trained with decreasing learning rate if the validation loss does not improve for 2 epochs and the model stops training if the validation loss does not improve for 4 epochs. The training ends after 17 epochs.
+
+![Model Training Accuracy][image6]
+
+![Model Training Loss][image7]
+
+**Validation loss is less than training loss as the training data is augmented with rotated and noisy data while validation data is not**
+
+### Steps
+* I first trained a base model then added more layers and resnet with inception module before the fully connected layers to increase the accuracy till I reached >  98% on training and validation data. But, adding more layers did not increase the accuracy.
+
+* Since I am using many layers, I used dropout (0.3 between conv layers and 0.5 between fully connected layers) to prevent overfitting while adding more layers.
+
+* I decreased/increased the learning rate till I found that 3e-4 a good starting value and it will decrease when loss does not improve.
+
+* As I mention in the next subsection, oversampling does not add a value to this problem.
 
 ----
 
@@ -79,14 +108,19 @@ This also acts as regularization to the model.
 
 ### Testing on new images from the web
 
-* The model have been tested on 11 images from the web.
+The model have been tested on 11 images from the web.
+The images are converted to grayscale and resized to be the same size as the training data. I did not add any noise or any rotation as I did on the training data. 
+<br>**This definitely affects the results as resizing the images affects their qualitys** <br>
+From the images below, it is clear that the images are much better than the training data, no blurry images and no noise. <br />
+**This may affect the prediction a little bit as the model is trained on images that are blurry and noisy.**<br>
+
 
 ![New Images][image4]
 
-* Model accuracy of the new images = 72.73 %
+* Model accuracy of the new images = 72.73 %. It is worse than the testing acciracy, but this is because the size is small and any misprediction will affect the performance. Moreover, the quality of the two datasets are different which affects the predictsion.
 
 * we found that the model is not able to differentiate well between the speeds (numvbers). This may be because:
-    * The classes is similar 
+    * The classes are similar 
     * There are classes with fewer samples than other classes
     * The images are blurry
 
