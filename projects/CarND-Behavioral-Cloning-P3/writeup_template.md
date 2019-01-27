@@ -1,10 +1,5 @@
 # **Behavioral Cloning** 
 
-## Writeup Template
-
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
----
 
 **Behavioral Cloning Project**
 
@@ -18,112 +13,163 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
+[image1]: ./images/model.png "Model Visualization"
+[image2]: ./images/sample_crop.png "Images Cropped"
+[image3]: ./images/train_history.png "Training History"
 
-## Rubric Points
-### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
 
----
-### Files Submitted & Code Quality
 
-#### 1. Submission includes all required files and can be used to run the simulator in autonomous mode
 
-My project includes the following files:
-* model.py containing the script to create and train the model
-* drive.py for driving the car in autonomous mode
-* model.h5 containing a trained convolution neural network 
-* writeup_report.md or writeup_report.pdf summarizing the results
+# Data
 
-#### 2. Submission includes functional code
-Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
-```sh
-python drive.py model.h5
-```
+### Data Collection
+The data was collected using term 1 simulator for 6 laps as follows: <br />
+* 4 laps where the car is at the center of the road.
+* 1 lap to handle the deviations of the road.
+* The last one that focuses only on the curves.
 
-#### 3. Submission code is usable and readable
+### Preprocessing
+The processing of the data is embedded in the model architecture. It is mainly two steps:
+1. Converting the RGB images to YUV
+2. Normalization
+3. Cropping the upper and lower parts of the image that are not part of the road and not necessary.
 
-The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+### Data Augmentation
+Since the size of the data is small, we augment the data using two techniques:
+1. Using the left and righ camera images and aplying a correction factor = 0.4 to the angle
+2. Flipping the images from left to right and using the negative of the steering angle
 
-### Model Architecture and Training Strategy
+### Data Generator
 
-#### 1. An appropriate model architecture has been employed
+A data generator is used to be able to load only the needed images into memory not the whole dataset.
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+### Train Validation Split
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+The data is splitted into two sets: training set and validation set.<br>
+The validation set consists of 0.2 of the whole dataset.
 
-#### 2. Attempts to reduce overfitting in the model
+# Model Architecture
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The model design is similar to Nvidia paper: End to End Learning for Self-Driving Cars<br>
+However, there are some differences:
+* Batch normalization is used before every convolution layer and fully connected layer except the last one to reduce overfitting and make the model converge faster.
+* Dropout is applied before the fully connected layers.
+* Tanh activation function is used as the steering angle is between 1 and -1.
+* The first fully connected layer has 100 nodes instead of >1000 to avoid overfitting.
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+Layer (type)         |        Output Shape     |       #  Param  
+=================================================================
+cropping2d_2 (Cropping2D)  |  (None, 90, 320, 3)   |     0         
 
-#### 3. Model parameter tuning
+color_space_layer_1 |(ColorSp (None, 90, 320, 3)     |   0         
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+normalization_layer_1 |(Norma (None, 90, 320, 3)     |   0         
 
-#### 4. Appropriate training data
+conv2d_1 (Conv2D)       |     (None, 43, 158, 24)   |    1824      
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
+leaky_re_lu_1 (LeakyReLU)  |  (None, 43, 158, 24)   |    0         
 
-For details about how I created the training data, see the next section. 
+batch_normalization_1 | (Batch (None, 43, 158, 24)   |    96        
 
-### Model Architecture and Training Strategy
+dropout_1 (Dropout)      |    (None, 43, 158, 24)   |    0         
 
-#### 1. Solution Design Approach
+conv2d_2 (Conv2D)         |   (None, 20, 77, 36)    |    21636     
 
-The overall strategy for deriving a model architecture was to ...
+leaky_re_lu_2 (LeakyReLU)  |  (None, 20, 77, 36)    |    0         
 
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
+batch_normalization_2 | (Batch (None, 20, 77, 36)    |    144       
 
-In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
+dropout_2 (Dropout)   |       (None, 20, 77, 36)    |    0         
 
-To combat the overfitting, I modified the model so that ...
+conv2d_3 (Conv2D)     |       (None, 18, 75, 48)     |   15600     
 
-Then I ... 
+leaky_re_lu_3 (LeakyReLU) |   (None, 18, 75, 48)    |    0         
 
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
+batch_normalization_3 | (Batch (None, 18, 75, 48)    |    192       
 
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
+dropout_3 (Dropout)     |     (None, 18, 75, 48)    |    0         
 
-#### 2. Final Model Architecture
+conv2d_4 (Conv2D)      |      (None, 16, 73, 64)   |     27712     
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+leaky_re_lu_4 (LeakyReLU)  |  (None, 16, 73, 64)    |    0         
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
+batch_normalization_4 | (Batch (None, 16, 73, 64)    |    256       
+
+dropout_4 (Dropout)   |       (None, 16, 73, 64)     |   0         
+
+conv2d_5 (Conv2D)     |       (None, 14, 71, 64)     |   36928     
+
+leaky_re_lu_5 (LeakyReLU) |   (None, 14, 71, 64)     |   0         
+
+flatten_1 (Flatten)   |       (None, 63616)      |       0         
+
+batch_normalization_5 | (Batch (None, 63616)      |       254464    
+
+dropout_5 (Dropout)   |       (None, 63616)       |      0         
+
+dense_1 (Dense)       |       (None, 100)         |      6361700   
+
+leaky_re_lu_6 (LeakyReLU) |   (None, 100)        |       0         
+
+batch_normalization_6 | (Batch (None, 100)         |      400       
+
+dropout_6 (Dropout)    |      (None, 100)           |    0         
+
+dense_2 (Dense)      |        (None, 50)             |   5050      
+
+leaky_re_lu_7 (LeakyReLU)  |   (None, 50)          |      0         
+
+batch_normalization_7 | (Batch (None, 50)        |        200       
+
+dropout_7 (Dropout)    |      (None, 50)        |        0         
+
+dense_3 (Dense)      |        (None, 10)         |       510       
+
+leaky_re_lu_8 (LeakyReLU)  |  (None, 10)        |        0         
+
+dense_4 (Dense)      |        (None, 1)        |         11        
+
 
 ![alt text][image1]
 
-#### 3. Creation of the Training Set & Training Process
+## Overfitting
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+As mentioned above, the overfitting is handled by using dropout, batch normalization, data augmentation, simple architecture.
 
-![alt text][image2]
+## Training
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+The model is trained using Adam optimizer with learning rate = 1e-3 (code line 157), and the learning rate is decreases if the validation loss increased for one epoch (code line 165).<br>
+I used also early stopping to stop training the model if the validation loss increases for 2 epochs (code line 164).<br>
+The model was trained using batch size = 32 before augmentation for 10 epochs using early stopping.
 
 ![alt text][image3]
-![alt text][image4]
-![alt text][image5]
 
-Then I repeated this process on track two in order to get more data points.
+## How to choose the correction factor
 
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
+This is not in the [model.py](./model.py) file but in [Colab](https://colab.research.google.com/drive/1cYGKCxJ4nH4ssoa2R48-MFKQhcziHmkv#scrollTo=WFra-c1CRxXo
+) <br>
 
-![alt text][image6]
-![alt text][image7]
+This can be summarized as following:
+1. I trained the model only on the images from the cener camera to predict the steering angle
+2. After that, I used transfer learning to build another model. The old model is frozen and used in the new model. The input is the image (left or right) and a float number [flag] (either 1 or 0) to tell if the image is a left camera image or right camera image.
+3. I then concatenate the output of the old model and the flag input and add another fuly connected layer with 1 node.
+4. The new model should be given a left/right images with a flag 1/0 (left / right) and output the steering angle as the center camera image.
+5. I then explored the weights of the last layer:
+<br>
+let y<sub>1</sub> is the output of the old model, y<sub>2</sub> is the output of the new model, (w<sub>1</sub>,w<sub>2</sub>, b) the weights of the last layer.
+<br>
+w<sub>1</sub> * y<sub>1</sub> + w<sub>1</sub> * flag + b = y<sub>2</sub>
+<br>
+w<sub>1</sub> ~ 0.634 <br>
+w<sub>2</sub> ~ -0.034 <br>
+b ~ -0.009
 
-Etc ....
+This is not an correct number since the models may be overfitting the data or not trained enough, but it gives me an intuition where to first pick a value for the corection factor.<br>
+Therefore, I used o.5, but it was not a good one, 0.4 gives me good results.
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+# Testing
+
+The model is tested on the simulator to make sure that the car does not go off the road or is flipped.
 
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
