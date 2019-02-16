@@ -18,10 +18,9 @@ The goals / steps of this project are the following:
 [image0]: ./camera_cal/calibration1.jpg "Distorted"
 [image1]: ./output_images/camera_cal/calibration1.jpg "Undistorted"
 [image2]: ./test_images/test6.jpg "Road Transformed"
-[image3]: ./output_images/threshold_test_images/test6.jpg "Binary Example"
-[image4]: ./output_images/lane0.png "Warp Example"
-[image5]: ./output_images/lane1.png "Fit Visual"
-[image6]: ./output_images/lane2.png "Fit2"
+[image3]: ./image_thresh.jpg "Binary Example"
+[image4]: ./image_warped.jpg "Warp Example"
+[image5]: ./lane_detected.jpg "Fit Visual"
 [image7]: ./output_images/result_final.png "Output"
 [video1]: ./project_video_final.mp4 "Video"
 
@@ -48,27 +47,26 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 
 #### 2. Color transforms and gradients.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 9 through 29 in `image_threshold.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of l and s channels from HSL color space afther applying a threshold to generate a binary image (thresholding steps at lines 9 through 50 in `image_threshold.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
 
 ![alt text][image3]
 
 #### 3. Perspective transformation.
 
-The code for my perspective transform includes a function called `apply_perspective_transform()`, which appears in lines 22 through 35 in the file `perspective_transform.py`.  The `apply_perspective_transform()` function takes as inputs an image.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `apply_perspective_transform()`, which appears in lines 34 through 49 in the file `perspective_transform.py`.  The `apply_perspective_transform()` function takes as inputs an image.  I chose the hardcode the source and destination points in the following manner:
 
 ```python
 src = np.float32(
-    [[550, 480], 
-    [300, 650], 
-    [730, 480], 
-    [1000, 650]]
-    )
+    [[500, 500], 
+    [200, 700], 
+    [800, 500], 
+    [1100, 700]])
 dst = np.float32(
     [[300, 0], 
     [300, 720], 
     [1000, 0], 
-    [1000, 720]]
-    )
+    [1000, 720]])
+    
 ```
 
 Before applying the perspective transformation, I used a mask to get only the lane lines to help me in the next step. <br>
@@ -84,7 +82,6 @@ Then I fit my lane lines with a 2nd order polynomial in `find_lane_pixels.py` ki
 
 ![alt text][image5]
 
-![alt text][image6]
 
 I used the histogram to draw a window around the pixels where there is a lane then I fitted a 2nd order polynomial to these pixels.
 
@@ -92,12 +89,12 @@ After that, I used the fitted polynomial to get the fitted x and y values to be 
 
 #### 5. Calculation of the radius of curvature of the lane and the position of the vehicle with respect to center
 
-I did this in lines # through # in my code in `measure_curvature.py`
+I did this in lines 52 through 69 in my code in `measure_curvature.py`.
 
 <br>
 
-The shift of the car from the center is calculated in `utils.py` in a function called `get_shift` that takes the left and right polynomials and calculates the shift.
-
+The shift of the car from the center is calculated in `utils.py` in a function called `get_shift` that takes the left and right points and 
+calculates the average point in the left and right side then calculates their average to be the midpoint. Then, I calculate the midpoint of the image and calculate the difference between the two mid points. 
 #### 6. Final output
 
 I implemented this step in my code in `solution.ipynb` in the function `process_frame(frame)`.  Here is an example of my result on a frame from the project video:
@@ -112,13 +109,13 @@ I implemented this step in my code in `solution.ipynb` in the function `process_
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
 Here's a [link to my video result](./project_video_sol.mp4)
-or on [Youtube](https://www.youtube.com/watch?v=Qg_Wz3UMzys)
+or on [Youtube](https://studio.youtube.com/video/PthTPkrIBLg/edit)
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### 1. The problems / issues I faced in your implementation of this project.
 
 The main problem was how to pick the points of the source and destination of the calibration function to keep the two lines of the lane parallel. The src and dst points are hardcoded, so it is not the best solution. 
 <br>
@@ -126,13 +123,13 @@ Therefore, I make a smoothing technique to handle this.
 <br>
 I used a Line class in `solution.ipynb` to keep track of the left and right lines.
 <br>
-I keep track of the past best 5 lines. The good fit is where:
-* The difference between (the difference between the maximum and the minimum x values) in both lines does not exceed some threshold. 
+I keep track of the past best 10 lines. The good fit is where:
 * Most of the fitted x values of the right line do not exist in the left side of the image and vice versa.
+* The curvature is not too small.
+* The 2nd polynomial is not too big.
 <br>
 
-I then use the average of the past 5 lines.
+I then use the average of the past 10 lines.
 <br>
-I only calculate new polynomials every 5 frames.
 
 However, This sometimes fails when frames become different and go away from the center or become too curved or some shape appears in the lane. So, There should be another stage before the lane detection. This new stage should categorize the frames and send each one to a specific pipeline that can handle the environment of that frame.
