@@ -11,8 +11,9 @@ import tf
 import cv2
 import yaml
 from scipy.spatial import KDTree
+import threading
 
-STATE_COUNT_THRESHOLD = 1
+STATE_COUNT_THRESHOLD = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -69,6 +70,27 @@ class TLDetector(object):
     def traffic_cb(self, msg):
         self.lights = msg.lights
 
+
+    # def do_classification(self, cv_image, light_wp):
+    #     state = self.light_classifier.get_classification(cv_image)
+
+    #     rospy.logwarn('state = {0}'.format(state))
+    #     if self.state != state:
+    #             self.state_count = 1
+    #             self.state = state
+
+    #     if self.state_count >= STATE_COUNT_THRESHOLD:
+    #             self.last_state = self.state
+    #             light_wp = light_wp if state == TrafficLight.RED else -1
+    #             self.last_wp = light_wp
+    #             self.upcoming_red_light_pub.publish(Int32(light_wp))
+    #     else:
+    #             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+    #     self.state_count += 1
+
+    #     self.counter += 1
+
+
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
             of the waypoint closest to the red light's stop line to /traffic_waypoint
@@ -77,22 +99,25 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        if self.counter % 10 == 0:
+        if self.counter % 1 == 0:
             self.has_image = True
             self.camera_image = msg
             light_wp, state = self.process_traffic_lights()
 
             cv_image = self.bridge.imgmsg_to_cv2(msg, 'rgb8')
-            state = self.light_classifier.get_classification(cv_image)
-            # cv2.imwrite("./imgs/img_" + str(state) + "_" + str(self.counter) + ".png", cv_image)
-            # self.counter += 1
+            # rospy.logwarn('shape = {0}'.format(cv_image.shape))
+            cv_image = cv2.resize(cv_image, (100,200))
+            # thread = threading.Thread(target=self.do_classification, args=[cv_image, light_wp])
+            # thread.start()
+            # state = self.light_classifier.get_classification(cv_image)
+            
             '''
             Publish upcoming red lights at camera frequency.
             Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
             of times till we start using it. Otherwise the previous stable state is
             used.
             '''
-            rospy.logwarn('state = {0}'.format(state))
+            # rospy.logwarn('state = {0}'.format(state))
             if self.state != state:
                 self.state_count = 1
                 self.state = state
